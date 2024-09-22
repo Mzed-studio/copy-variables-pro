@@ -1,6 +1,6 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
-
+const TerserPlugin = require('terser-webpack-plugin'); // Import the TerserPlugin
 const path = require('path');
 
 module.exports = (env, argv) => ({
@@ -42,6 +42,12 @@ module.exports = (env, argv) => ({
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist'), // Compile into a folder called "dist"
+    publicPath: '',
+  },
+
+  optimization: {
+    minimize: true, // Enable code minimization
+    minimizer: [new TerserPlugin()], // Use Terser to minimize JavaScript
   },
 
   // Tells Webpack to generate "ui.html" and to inline "ui.ts" into it
@@ -55,5 +61,3 @@ module.exports = (env, argv) => ({
     new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/ui/]),
   ],
 });
-
-

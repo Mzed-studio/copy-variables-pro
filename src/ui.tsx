@@ -2,15 +2,8 @@ import React, { useState, useEffect, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles/globals.css";
 
-// Importing components without lazy loading
-const {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} = require("./components/ui/select");
-const Button = require("./components/ui/button").default; // Importing Button with default export
+import LazySelect from "./components/LazySelect"; // Load synchronously
+import Button from "./components/ui/button"; // Load synchronously
 
 // Define a type for the collection items
 interface Collection {
@@ -42,29 +35,23 @@ const App = () => {
 
       if (msg.type === "no-collections") {
         setStatus("No variable collections found.");
-
       } else if (msg.type === "collections-list") {
         setCollections(msg.data);
-
       } else if (msg.type === "collection-copied") {
         setCopiedCollection(msg.data);
         setStatus(`[${msg.data.name}] copied.`);
-
       } else if (msg.type === "collection-pasted") {
         setCopiedCollection(null);
         setStatus(`[${msg.name}] pasted successfully!`);
-
       } else if (msg.type === "saved-collection-found") {
         setCopiedCollection(msg.data);
         setStatus(`Found: [${msg.data.name}]. Ready to paste!`);
-                
       } else if (msg.type === "no-saved-collection") {
         setStatus("No saved collection found.");
       } else if (msg.type === "paste-error") {
-  setStatus(msg.message);
-  setCopiedCollection(null);  // Clear the copied collection state
-}
-
+        setStatus(msg.message);
+        setCopiedCollection(null); // Clear the copied collection state
+      }
     };
   }, []);
 
@@ -98,18 +85,10 @@ const App = () => {
       </p>
 
       <Suspense fallback={<div>Loading...</div>}>
-        <Select onValueChange={setSelectedCollection}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a Collection" />
-          </SelectTrigger>
-          <SelectContent>
-            {collections.map((collection: Collection) => (
-              <SelectItem key={collection.id} value={collection.id}>
-                {collection.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <LazySelect
+          onValueChange={setSelectedCollection}
+          collections={collections}
+        />
       </Suspense>
 
       <div className="space-y-3 pt-10">
@@ -133,6 +112,49 @@ const App = () => {
     </div>
   );
 };
+
+// return (
+//   <div className="p-4 space-y-4">
+//     <p className="text-sm text-center text-green-600 border border-green-300 rounded-md p-2">
+//       {status}
+//     </p>
+
+//     <Suspense fallback={<div>Loading...</div>}>
+//       <Select onValueChange={setSelectedCollection}>
+//         <SelectTrigger>
+//           <SelectValue placeholder="Select a Collection" />
+//         </SelectTrigger>
+//         <SelectContent>
+//           {collections.map((collection: Collection) => (
+//             <SelectItem key={collection.id} value={collection.id}>
+//               {collection.name}
+//             </SelectItem>
+//           ))}
+//         </SelectContent>
+//       </Select>
+//     </Suspense>
+
+//     <div className="space-y-3 pt-10">
+//       <Suspense fallback={<div>Loading...</div>}>
+//         <Button
+//           onClick={handleCopy}
+//           disabled={!selectedCollection}
+//           className="w-full"
+//         >
+//           Copy Collection
+//         </Button>
+//         <Button
+//           onClick={handlePaste}
+//           disabled={!copiedCollection}
+//           className="w-full"
+//         >
+//           Paste Collection
+//         </Button>
+//       </Suspense>
+//     </div>
+//   </div>
+// );
+// };
 
 console.log("About to render React app");
 
