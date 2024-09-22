@@ -60,7 +60,11 @@ const App = () => {
                 
       } else if (msg.type === "no-saved-collection") {
         setStatus("No saved collection found.");
-      }
+      } else if (msg.type === "paste-error") {
+  setStatus(msg.message);
+  setCopiedCollection(null);  // Clear the copied collection state
+}
+
     };
   }, []);
 
