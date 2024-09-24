@@ -4,6 +4,7 @@ import "./styles/globals.css";
 
 import LazySelect from "./components/LazySelect"; // Load synchronously
 import Button from "./components/ui/button"; // Load synchronously
+import { RotateCw } from "lucide-react";
 
 // Define a type for the collection items
 interface Collection {
@@ -30,19 +31,26 @@ const App = () => {
 
     // Listen for messages from the plugin code
     window.onmessage = (event: MessageEvent) => {
-      console.log("Received message from plugin:", event.data.pluginMessage);
       const msg = event.data.pluginMessage;
 
       if (msg.type === "no-collections") {
         setStatus("No variable collections found.");
       } else if (msg.type === "collections-list") {
         setCollections(msg.data);
+        setStatus("Collections refreshed!"); 
+
+        const userId = figma.currentUser?.id;
+        if (userId) {
+          parent.postMessage({ pluginMessage: { type: "check-saved-collection" } }, "*");
+        }
+
       } else if (msg.type === "collection-copied") {
         setCopiedCollection(msg.data);
         setStatus(`[${msg.data.name}] copied.`);
       } else if (msg.type === "collection-pasted") {
         setCopiedCollection(null);
         setStatus(`[${msg.name}] pasted successfully!`);
+
       } else if (msg.type === "saved-collection-found") {
         setCopiedCollection(msg.data);
         setStatus(`Found: [${msg.data.name}]. Ready to paste!`);
@@ -51,9 +59,34 @@ const App = () => {
       } else if (msg.type === "paste-error") {
         setStatus(msg.message);
         setCopiedCollection(null); // Clear the copied collection state
+      } else if (msg.type === "auth-error") {
+        setStatus("Please log in to Figma to use this feature.");
+      } else if (msg.type === "empty-collection") {
+        setStatus("The selected collection is empty or invalid.");
+      } else if (msg.type === "alias-error") {
+        setStatus("One or more variable aliases could not be resolved.");
+      } else if (msg.type === "mode-error") {
+        setStatus("Cannot paste due to mode restrictions.");
+      } else if (msg.type === "storage-error") {
+        setStatus("Storage limit exceeded. Cannot save collection.");
+      } else if (msg.type === "network-error") {
+        setStatus("Network issue encountered. Please try again.");
+      } else if (msg.type === "concurrent-modification") {
+        setStatus("Collection modified in Figma. Please refresh and try again.");
+      } else if (msg.type === "unsupported-type") {
+        setStatus("Unsupported variable types detected. Cannot copy.");
+      } else if (msg.type === "unexpected-error") {
+        setStatus("An unexpected error occurred. Please try again.");
       }
     };
   }, []);
+
+  // Function to refresh collections
+  const handleRefresh = async() => {
+    setStatus("Refreshing collections...");
+    parent.postMessage({ pluginMessage: { type: "get-collections" } }, "*");
+  };
+
 
   const handleCopy = () => {
     if (selectedCollection) {
@@ -66,6 +99,8 @@ const App = () => {
         },
         "*"
       );
+    } else {
+      setStatus("Please select a collection to copy.");
     }
   };
 
@@ -75,6 +110,8 @@ const App = () => {
         { pluginMessage: { type: "paste-collection", data: copiedCollection } },
         "*"
       );
+    } else {
+      setStatus("No collection copied to paste.");
     }
   };
 
@@ -85,10 +122,12 @@ const App = () => {
       </p>
 
       <Suspense fallback={<div>Loading...</div>}>
-        <LazySelect
-          onValueChange={setSelectedCollection}
-          collections={collections}
-        />
+        <div className="flex items-center space-x-2">
+          <LazySelect onValueChange={setSelectedCollection} collections={collections} />
+          <Button variant="outline" size="icon" onClick={handleRefresh}>
+            <RotateCw size={16}/>
+          </Button>
+        </div>
       </Suspense>
 
       <div className="space-y-3 pt-10">
@@ -113,55 +152,9 @@ const App = () => {
   );
 };
 
-// return (
-//   <div className="p-4 space-y-4">
-//     <p className="text-sm text-center text-green-600 border border-green-300 rounded-md p-2">
-//       {status}
-//     </p>
-
-//     <Suspense fallback={<div>Loading...</div>}>
-//       <Select onValueChange={setSelectedCollection}>
-//         <SelectTrigger>
-//           <SelectValue placeholder="Select a Collection" />
-//         </SelectTrigger>
-//         <SelectContent>
-//           {collections.map((collection: Collection) => (
-//             <SelectItem key={collection.id} value={collection.id}>
-//               {collection.name}
-//             </SelectItem>
-//           ))}
-//         </SelectContent>
-//       </Select>
-//     </Suspense>
-
-//     <div className="space-y-3 pt-10">
-//       <Suspense fallback={<div>Loading...</div>}>
-//         <Button
-//           onClick={handleCopy}
-//           disabled={!selectedCollection}
-//           className="w-full"
-//         >
-//           Copy Collection
-//         </Button>
-//         <Button
-//           onClick={handlePaste}
-//           disabled={!copiedCollection}
-//           className="w-full"
-//         >
-//           Paste Collection
-//         </Button>
-//       </Suspense>
-//     </div>
-//   </div>
-// );
-// };
-
-console.log("About to render React app");
 
 document.addEventListener("DOMContentLoaded", function () {
   const container = document.getElementById("react-page");
   const root = createRoot(container);
   root.render(<App />);
 });
-
-console.log("React app rendered");
