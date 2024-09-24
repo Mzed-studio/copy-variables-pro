@@ -1,7 +1,6 @@
 import { CollectionInfo, Mode } from './types/types';
 
 figma.showUI(__html__, { themeColors: true, width: 300, height: 400 });
-// figma.showUI(__html__);
 
 figma.ui.onmessage = async (msg: {
   type: string;
@@ -104,25 +103,26 @@ figma.ui.onmessage = async (msg: {
       return;
     }
 
-    const newCollection = figma.variables.createVariableCollection(collectionData.name);
-    const modeIdMap: { [oldModeId: string]: string } = {};
-    modeIdMap[collectionData.modes[0].modeId] = newCollection.modes[0].modeId;
+    try {
+      const newCollection = figma.variables.createVariableCollection(collectionData.name);
+      const modeIdMap: { [oldModeId: string]: string } = {};
+      modeIdMap[collectionData.modes[0].modeId] = newCollection.modes[0].modeId;
 
-    collectionData.modes.slice(1).forEach((mode: Mode) => {
-      const newMode = newCollection.addMode(mode.name);
-      modeIdMap[mode.modeId] = newMode;
-    });
+      collectionData.modes.slice(1).forEach((mode: Mode) => {
+        const newMode = newCollection.addMode(mode.name);
+        modeIdMap[mode.modeId] = newMode;
+      });
 
-    const variableIdMap: { [oldId: string]: string } = {};
+      const variableIdMap: { [oldId: string]: string } = {};
 
-    // First pass: create all variables
-    for (const v of collectionData.variables) {
-      const newVariable = figma.variables.createVariable(v.name, newCollection, v.resolvedType);
-      if (v.scopes) {
-        newVariable.scopes = v.scopes;
+      // First pass: create all variables
+      for (const v of collectionData.variables) {
+        const newVariable = figma.variables.createVariable(v.name, newCollection, v.resolvedType);
+        if (v.scopes) {
+          newVariable.scopes = v.scopes;
+        }
+        variableIdMap[v.id] = newVariable.id;
       }
-      variableIdMap[v.id] = newVariable.id;
-    }
 
     // Second pass: set values and resolve aliases
     for (const v of collectionData.variables) {
@@ -149,10 +149,22 @@ figma.ui.onmessage = async (msg: {
       }
     }
 
-    // Successfully pasted the collection, now delete it from storage
-    await figma.clientStorage.deleteAsync(`collection-${userId}`);
+      // Successfully pasted the collection, now delete it from storage
+      await figma.clientStorage.deleteAsync(`collection-${userId}`);
 
-    // Notify the UI that the collection has been pasted successfully
-    figma.ui.postMessage({ type: "collection-pasted", name: collectionData.name });
+      // Notify the UI that the collection has been pasted successfully
+      figma.ui.postMessage({ type: "collection-pasted", name: collectionData.name });
+
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Limited to 1 modes only")) {
+        figma.ui.postMessage({ 
+          type: "paste-error", 
+          message: "This file only supports 1 mode. The collection was not pasted correctly."
+        });
+        return;
+      }
+      // If it's a different error, rethrow it
+      throw error;
+    }
   }
 };
